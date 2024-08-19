@@ -29,23 +29,34 @@ public class JobBulkCreateWorkLogsControllerTest {
         );
         
         insert program;
+        
+        Account acct = new Account(
+            Name = 'Test Account1',
+            Customer_Group__c = 'Telecom',
+            Type = 'Vendor'
+        );
+        insert acct;
 
-        // Create test Project Price Books
-        List<sitetracker__Project_Price_Book__c> projectPriceBooks = new List<sitetracker__Project_Price_Book__c>();
-        for (Integer i = 0; i < 2; i++) {
-            projectPriceBooks.add(new sitetracker__Project_Price_Book__c(
-                Name = 'Test Project Price Book ' + i, 
-                Program__c = program.Id, 
-                sitetracker__Project_Template__c = template.Id
-            ));
-        }
+        sitetracker__Job_Template__c jobTemplate = new sitetracker__Job_Template__c(
+            Name = 'Test Template',
+            sitetracker__Active__c = true
+        );
+        insert jobTemplate;
 
-        insert projectPriceBooks;
+        // Create test Project Price Book
+        sitetracker__Project_Price_Book__c projectPriceBook = new sitetracker__Project_Price_Book__c(
+            Name = 'Test Project Price Book',
+            sitetracker__Project_Template__c = template.Id,
+            sitetracker__Active__c = true,
+            dataAreaId__c = 'CNS',
+            Customer__c = acct.Id
+        );
+        insert projectPriceBook;
 
         // Create test Price Book Items
         sitetracker__Pricebook_Item__c pbi = new sitetracker__Pricebook_Item__c(
             Name = 'Test Price Book Item',
-            sitetracker__Project_Price_Book__c = projectPriceBooks[0].Id,
+            sitetracker__Project_Price_Book__c = projectPriceBook.Id,
             Price_Per_Unit__c = 2.00
         );
 
@@ -54,7 +65,10 @@ public class JobBulkCreateWorkLogsControllerTest {
         // Create a test job record
         sitetracker__Job__c job = new sitetracker__Job__c(
             Name = 'Test Job',
-            Project_Price_Book__c = projectPriceBooks[0].Id,
+            Project_Price_Book__c = projectPriceBook.Id,
+            BU__c = 'CNS',
+            Client__c = acct.id,
+            sitetracker__Job_Template__c = jobTemplate.id,
             sitetracker__Project__c = project.Id
         );
         insert job;
@@ -174,7 +188,7 @@ public class JobBulkCreateWorkLogsControllerTest {
             System.assertEquals('Work Date is required', e.getMessage());
         }
     }
-  */
+    */
 
     // @isTest
     // static void testCreateWorkLogs() {
