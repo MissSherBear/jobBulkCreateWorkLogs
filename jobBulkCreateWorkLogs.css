@@ -1,0 +1,31 @@
+th {
+    text-transform: uppercase;
+    height: 2rem;
+    border-bottom: 1px solid #e9e9e9;
+    border-top: 2px solid #e9e9e9;
+    background-color: white;
+  }
+  /* td {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  } */
+  tr {
+    border-bottom: 1px solid #e9e9e9;
+  }
+  tbody {
+    /* Set the height of table body */
+    height: 50px;
+
+    /* Set vertical scroll */
+    overflow-y: auto;
+
+    /* Hide the horizontal scroll */
+    overflow-x: hidden;
+}
+
+.sticky-header {
+  position: sticky;
+  top: 0;
+  background-color: #f3f2f2; /* Optional: Adds background color to the sticky header */
+  z-index: 1;
+}
