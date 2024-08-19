@@ -1,0 +1,149 @@
+<template>
+    <div style="display: none;">{recordId}</div>
+    <template if:false={showConfirmation}>
+        <lightning-card title="Create Work Logs" icon-name="standard:work_order"> 
+            <div class="slds-m-around_small" >
+                <lightning-record-edit-form object-api-name="Work_Log__c" density="comfy">
+                    <lightning-messages></lightning-messages>
+                    <!-- <p style="font-weight:600; color:rgb(0, 0, 66)">Job Name: {jobName}</p> -->
+                    <!-- <p>Enter the details for the Work Log. Select which Finance records you would like to create a Work Log for by entering in the Claimed QTY.</p>                     -->
+                    <!-- <div class="slds-grid">
+                        <div class="slds-col slds-size_1-of-4">
+                            <lightning-input-field field-name="Assigned_Resource__c" data-id="assignedResource"></lightning-input-field>
+                            <lightning-input label="Starting Point" data-id="startingPoint"></lightning-input>
+                        </div>
+                        <div class="slds-col slds-size_1-of-4">
+                            <lightning-input-field field-name="Work_Date__c" value={today} data-id="workDate"></lightning-input-field>
+                            <lightning-input label="Ending Point" data-id="endingPoint"></lightning-input>
+                        </div>
+                        <div class="slds-col slds-size_1-of-4">
+                            <lightning-input-field field-name="Ticket__c" data-id="ticket"></lightning-input-field>
+                            <lightning-input label="Access Point" data-id="accessPoint"></lightning-input>
+                        </div>
+                        <div class="slds-col slds-size_1-of-4">
+                            <lightning-input label="Page" data-id="page"></lightning-input>
+                            <lightning-input-field field-name="Notes_Comments__c" data-id="notesComments"></lightning-input-field>
+                        </div>
+                    </div> -->
+
+                    <lightning-layout>
+                        <lightning-layout-item padding="around-small">
+                            <lightning-input-field field-name="Assigned_Resource__c" required="true" data-id="assignedResource"></lightning-input-field>
+                            <lightning-input-field field-name="Work_Date__c" value={today} data-id="workDate"></lightning-input-field>
+                        </lightning-layout-item>
+                        <lightning-layout-item padding="around-small" size="2">
+                            <lightning-input label="Starting Point" data-id="startingPoint" style="padding-bottom: 10px;"></lightning-input>
+                            <lightning-input label="Ending Point" data-id="endingPoint"></lightning-input>
+                        </lightning-layout-item>
+                        <lightning-layout-item padding="around-small">
+                            <lightning-input label="Ticket #" data-id="ticket" style="padding-bottom: 10px;"></lightning-input>
+                            <lightning-input label="Page" data-id="page"></lightning-input>
+                        </lightning-layout-item>
+                        <lightning-layout-item padding="around-small" size="5">
+                            <lightning-input label="Access Point" data-id="accessPoint" style="padding-left: 5px;"></lightning-input>
+                            <lightning-input-field field-name="Notes_Comments__c" data-id="notesComments"></lightning-input-field>
+                        </lightning-layout-item>
+                    </lightning-layout>
+                    
+                </lightning-record-edit-form>
+            </div>
+        <div style="width: 20%; padding: 10px;">
+            <lightning-input 
+                type="search" 
+                label="Search" 
+                variant="label-hidden"
+                placeholder="Search Finance Lines..." 
+                onchange={handleSearch}>
+            </lightning-input>
+        </div>
+
+        <div class="slds-scrollable" style="height:400px;">
+        <table class="slds-table">
+            <thead class="slds-text-title_caps sticky-header">
+                <th>Finance Line</th>
+                <th>Article</th>
+                <th>Description</th>
+                <th>Price Per Unit</th>
+                <th>Claimed QTY</th>
+                <th>Unbillable</th>
+            </thead>
+            <tbody>
+                <template for:each={filteredFinanceLines} for:item="finance">
+                    <tr key={finance.Id}>
+                        <td><a href=#>{finance.Name}</a></td>
+                        <td>{finance.sitetracker__PO_Line_Item__c}</td>
+                        <td>{finance.Short_Description__c}</td>
+                        <td><lightning-formatted-number value={finance.Price_Per_Unit_Formula__c} format-style="currency" currency-code="USD"></lightning-formatted-number></td>
+                        <td><div style="width:fit-content"><lightning-input type="number" name="input1" data-id={finance.Id} label="Claimed QTY" variant="label-hidden" value={finance.Claimed_QTY__c} onchange={handleClaimedQtyChange}></lightning-input></div></td>
+                        <td><lightning-input type="checkbox" label="Checkbox" name="unbillable" data-id={finance.Id} variant="label-hidden" checked={finance.Unbillable__c} onchange={handleUnbillableChange}></lightning-input></td>
+                    </tr>
+                </template>
+            </tbody>            
+        </table>
+        </div>
+        <!-- Button footer -->
+         <div slot="footer" class="slds-align_absolute-center">
+            <lightning-button class="slds-m-around_small" variant="brand" label="Create Work Logs" title="Create Work Logs" onclick={handleSave} disabled={isSaveDisabled}></lightning-button>
+        </div>
+
+        <!-- OLD BUTTON -->
+        <!-- <lightning-button variant="brand" label="Create Work Logs" title="Create Work Logs" onclick={handleSave}></lightning-button> -->
+
+        <!-- <div style="height: 400px;">
+            <lightning-datatable
+                key-field="Id"
+                data={filteredFinanceLines}
+                columns={columns}
+                draft-values={draftValues}
+                hide-checkbox-column="true"
+                onsave={handleSave}
+                onrowaction={handleRowAction}>
+            </lightning-datatable>
+        </div> -->
+
+            <template if:true={isLoading}>
+                <lightning-spinner variant="brand" alternative-text="Loading" size="medium"></lightning-spinner>
+            </template>
+        </lightning-card>
+    </template>
+  
+
+    <!-- Confirmation Screen -->
+    <template if:true={showConfirmation}>
+        <lightning-card icon-name="action:approval">
+            <h1 style="color: green; font-size: 20px; font-weight:400;" slot="title">Success! Work Logs have been created successfully.</h1>
+            <div class="slds-m-around_medium">
+                <p>Work Log details:</p>
+                <br>
+                <table class="slds-table">
+                    <thead class="slds-text-title_caps">
+                        <th>Work Log Name</th>
+                        <th>Assigned Resource</th>
+                        <th>Finance Line</th>
+                        <th>Claimed QTY</th>
+                        <th>Unbillable</th>
+                        <th>Work Date</th>
+                        <th>Notes/Comments</th>
+                    </thead>
+                    <tbody>
+                        <template for:each={createdWorkLogs} for:item="workLog">
+                            <tr key={workLog.Id}>
+                                <td><a href=#>{workLog.Name}</a></td>
+                                <td>{workLog.Assigned_Resource__c}</td>
+                                <td><a href=#>{workLog.Finance__c}</a></td>
+                                <td>{workLog.Claimed_QTY__c}</td>
+                                <!-- If Unbillable = true, display <lightning-icon icon-name="utility:success" variant="success" size="small"></lightning-icon> --> 
+                                <td><div style="width:fit-content"><lightning-input type="checkbox" label="Checkbox" name="unbillable" data-id={workLog.Finance__c} variant="label-hidden" checked={workLog.Unbillable__c} disabled></lightning-input></div></td>
+                                <td><lightning-formatted-date-time value={workLog.Work_Date__c} year="numeric" month="numeric" day="numeric"></lightning-formatted-date-time></td>
+                                <td>{workLog.Notes_Comments__c}</td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+                <br><br />
+                <lightning-button variant="brand" slot="footer" label="Close" class="slds-align_absolute-center" onclick={handleCloseConfirmation}></lightning-button>
+            </div>
+        </lightning-card>
+    </template>
+
+</template>
