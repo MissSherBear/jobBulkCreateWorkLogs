@@ -95,9 +95,9 @@ renderedCallback() {
             .then(result => {
                 this.financeLines = result.map(financeLine => ({
                     ...financeLine,
-                    Claimed_QTY__c: null // Initialize Claimed_QTY__c field
+                    Claimed_QTY__c: financeLine.Claimed_QTY__c || null // Initialize Claimed_QTY__c field if not already set
                 }));
-                this.filteredFinanceLines = this.financeLines;
+                this.filteredFinanceLines = [...this.financeLines];
                 this.updateSaveButtonState();
                 console.log('loadRelatedFinanceLines result: ', this.financeLines);
             })
@@ -110,10 +110,12 @@ renderedCallback() {
     handleSearch(event) {
         const searchKey = event.target.value.toLowerCase();
         if (searchKey) {
+            // Filter the list based on the search key but don't reset the original financeLines
             this.filteredFinanceLines = this.financeLines.filter(line => 
                 line.sitetracker__PO_Line_Item__c && line.sitetracker__PO_Line_Item__c.toLowerCase().includes(searchKey)
             );
         } else {
+            // If the search is cleared, show all the finance lines without losing data
             this.filteredFinanceLines = this.financeLines;
         }
     }
@@ -124,6 +126,11 @@ renderedCallback() {
         this.filteredFinanceLines = this.filteredFinanceLines.map(finance => 
             (finance.Id === financeId ? { ...finance, Claimed_QTY__c: claimedQty } : finance)
         );
+        // Sync the claimedQty change with financeLines to persist values across filters
+        this.financeLines = this.financeLines.map(finance => 
+            (finance.Id === financeId ? { ...finance, Claimed_QTY__c: claimedQty } : finance)
+        );
+
         this.updateSaveButtonState();
         console.log('handleClaimedQtyChange finance: ', financeId);
         console.log('handleClaimedQtyChange finance.Claimed_QTY__c: ', financeId.Claimed_QTY__c);
@@ -135,6 +142,10 @@ renderedCallback() {
         const financeId = event.target.dataset.id;
         const unbillable = event.target.checked;
         this.filteredFinanceLines = this.filteredFinanceLines.map(finance => 
+            (finance.Id === financeId ? { ...finance, Unbillable__c: unbillable } : finance)
+        );
+        // Sync the unbillable change with financeLines to persist values across filters
+        this.financeLines = this.financeLines.map(finance => 
             (finance.Id === financeId ? { ...finance, Unbillable__c: unbillable } : finance)
         );
         console.log('handleUnbillableChange unbillable: ', unbillable);
