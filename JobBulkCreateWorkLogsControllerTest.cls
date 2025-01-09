@@ -46,6 +46,7 @@ public class JobBulkCreateWorkLogsControllerTest {
         // Create test Project Price Book
         sitetracker__Project_Price_Book__c projectPriceBook = new sitetracker__Project_Price_Book__c(
             Name = 'Test Project Price Book',
+            Program__c = program.Id, 
             sitetracker__Project_Template__c = template.Id,
             sitetracker__Active__c = true,
             dataAreaId__c = 'CNS',
@@ -68,6 +69,7 @@ public class JobBulkCreateWorkLogsControllerTest {
             Project_Price_Book__c = projectPriceBook.Id,
             BU__c = 'CNS',
             Client__c = acct.id,
+            Division__c = 'Interco',
             sitetracker__Job_Template__c = jobTemplate.id,
             sitetracker__Project__c = project.Id
         );
@@ -98,6 +100,27 @@ public class JobBulkCreateWorkLogsControllerTest {
         sitetracker__Job__c fetchedJob = JobBulkCreateWorkLogsController.getJobRecord(job.Id);
         System.assertNotEquals(null, fetchedJob, 'Job should not be null');
         System.assertEquals(job.Id, fetchedJob.Id, 'Job Ids should match');
+    }
+    
+    @isTest
+    static void testGetJobName() {
+        // Retrieve the test Job record created in testSetup
+        sitetracker__Job__c job = [SELECT Id, Name FROM sitetracker__Job__c LIMIT 1];
+
+        // Call the getJobName method
+        String jobName = JobBulkCreateWorkLogsController.getJobName(job.Id);
+
+        // Validate the job name
+        System.assertEquals('Test Job', jobName, 'Job name should match the expected value');
+    }
+    
+    @isTest
+    static void testGetInvoiceEligibilityPicklistValues() {
+        // Call the getInvoiceEligibilityPicklistValues method
+        List<String> picklistValues = JobBulkCreateWorkLogsController.getInvoiceEligibilityPicklistValues();
+
+        // Assert that the picklist contains expected values
+        System.assertNotEquals(0, picklistValues.size(), 'Picklist values should not be empty');
     }
 
     @isTest
@@ -147,6 +170,7 @@ public class JobBulkCreateWorkLogsControllerTest {
         List<Work_Log__c> insertedLogs = [SELECT Id FROM Work_Log__c WHERE Assigned_Resource__c != null];
         System.assertEquals(3, insertedLogs.size(), '3 Work Logs should be inserted');
     }
+    
 
     /*
     @isTest
