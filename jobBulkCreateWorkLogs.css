@@ -29,3 +29,9 @@ th {
   background-color: #f3f2f2; /* Optional: Adds background color to the sticky header */
   z-index: 1;
 }
+
+.uiModal--horizontalForm .modal-container {
+  width: 100%;
+  max-width: 1300px;
+  min-width: 480px;
+}
