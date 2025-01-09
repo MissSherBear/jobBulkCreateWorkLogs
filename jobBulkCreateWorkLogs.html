@@ -65,6 +65,7 @@
                 <th>Description</th>
                 <th>Price Per Unit</th>
                 <th>Claimed QTY</th>
+                <th>Invoice Eligibility</th>
                 <th>Unbillable</th>
             </thead>
             <tbody>
@@ -73,8 +74,10 @@
                         <td><a href=#>{finance.Name}</a></td>
                         <td>{finance.sitetracker__PO_Line_Item__c}</td>
                         <td>{finance.Short_Description__c}</td>
-                        <td><lightning-formatted-number value={finance.Price_Per_Unit_Formula__c} format-style="currency" currency-code="USD"></lightning-formatted-number></td>
-                        <td><div style="width:fit-content"><lightning-input type="number" name="input1" data-id={finance.Id} label="Claimed QTY" variant="label-hidden" value={finance.Claimed_QTY__c} onchange={handleClaimedQtyChange}></lightning-input></div></td>
+                        <td><lightning-formatted-number value={finance.Price_Per_Unit__c} format-style="currency" currency-code="USD"></lightning-formatted-number></td>
+                        <td><div style="width:fit-content"><lightning-input type="number" step="0.01" name="input1" data-id={finance.Id} label="Claimed QTY" variant="label-hidden" value={finance.Claimed_QTY__c} onchange={handleClaimedQtyChange}></lightning-input></div></td>
+                        <!-- <td><lightning-input type="picklist" label="Invoice Eligibility" name="invoice" data-id={finance.Id} variant="label-hidden" onchange={handleInvoiceEligibilityChange} ></lightning-input></td> -->
+                        <td><lightning-combobox name="invoiceEligibility" variant="label-hidden" value={finance.Invoice_Eligibility__c} options={invoiceEligibilityOptions} data-id={finance.Id} onchange={handleInvoiceEligibilityChange}></lightning-combobox></td>
                         <td><lightning-input type="checkbox" label="Checkbox" name="unbillable" data-id={finance.Id} variant="label-hidden" checked={finance.Unbillable__c} onchange={handleUnbillableChange}></lightning-input></td>
                     </tr>
                 </template>
