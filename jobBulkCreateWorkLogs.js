@@ -2,6 +2,7 @@ import { LightningElement, api, wire, track } from 'lwc';
 import getJobRecord from '@salesforce/apex/JobBulkCreateWorkLogsController.getJobRecord';
 import getRelatedFinanceLines from '@salesforce/apex/JobBulkCreateWorkLogsController.getRelatedFinanceLines';
 import createWorkLogs from '@salesforce/apex/JobBulkCreateWorkLogsController.createWorkLogs';
+import getInvoiceEligibilityPicklistValues from '@salesforce/apex/JobBulkCreateWorkLogsController.getInvoiceEligibilityPicklistValues';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { getRecord, createRecord } from 'lightning/uiRecordApi';
 
@@ -21,6 +22,7 @@ export default class JobBulkCreateWorkLogs extends LightningElement {
     @track showConfirmation = false;
     @track createdWorkLogs = [];
     @track isSaveDisabled = true;
+    @track invoiceEligibilityOptions = [];
 
     @track columns = [
         { label: 'Finance Line', fieldName: 'Name' },
@@ -43,19 +45,17 @@ export default class JobBulkCreateWorkLogs extends LightningElement {
 
     _recordId;
 
-@api set jobId(value) {
-    this._recordId = value;
+    @api set jobId(value) {
+        this._recordId = value;
+    }
 
-    // do your thing right here with this.recordId / value
-}
+    get jobId() {
+        return this._recordId;
+    }
 
-get jobId() {
-    return this._recordId;
-}
-
-renderedCallback() {
-    console.log('renderedCallback Record ID:', this.recordId);
-}
+    renderedCallback() {
+        console.log('renderedCallback Record ID:', this.recordId);
+    }
 
 
     @wire(getRecord, { recordId: '$recordId', fields: ['sitetracker__Job__c.Name'] }) 
@@ -89,15 +89,17 @@ renderedCallback() {
             });
     }
 
+    claimedQtyMap = new Map();
+
     loadRelatedFinanceLines() {
         console.log('loadRelatedFinanceLines Record ID:', this.recordId);
         getRelatedFinanceLines({ recordId: this.recordId })
             .then(result => {
                 this.financeLines = result.map(financeLine => ({
                     ...financeLine,
-                    Claimed_QTY__c: financeLine.Claimed_QTY__c || null // Initialize Claimed_QTY__c field if not already set
+                    Claimed_QTY__c: null // Initialize Claimed_QTY__c field
                 }));
-                this.filteredFinanceLines = [...this.financeLines];
+                this.filteredFinanceLines = this.financeLines;
                 this.updateSaveButtonState();
                 console.log('loadRelatedFinanceLines result: ', this.financeLines);
             })
@@ -109,33 +111,39 @@ renderedCallback() {
 
     handleSearch(event) {
         const searchKey = event.target.value.toLowerCase();
+
         if (searchKey) {
-            // Filter the list based on the search key but don't reset the original financeLines
             this.filteredFinanceLines = this.financeLines.filter(line => 
                 line.sitetracker__PO_Line_Item__c && line.sitetracker__PO_Line_Item__c.toLowerCase().includes(searchKey)
             );
         } else {
-            // If the search is cleared, show all the finance lines without losing data
             this.filteredFinanceLines = this.financeLines;
         }
+
+        // Reapply the preserved Claimed_QTY__c values
+        this.filteredFinanceLines = this.filteredFinanceLines.map(line => {
+            return {
+                ...line,
+                Claimed_QTY__c: this.claimedQtyMap.get(line.Id) || line.Claimed_QTY__c
+            };
+        });
     }
 
     handleClaimedQtyChange(event) {
         const financeId = event.target.dataset.id;
         const claimedQty = event.target.value;
+
+        // Update the Claimed_QTY__c value in the map
+        this.claimedQtyMap.set(financeId, claimedQty);
+
+        // Update the Claimed_QTY__c value in the filteredFinanceLines
         this.filteredFinanceLines = this.filteredFinanceLines.map(finance => 
             (finance.Id === financeId ? { ...finance, Claimed_QTY__c: claimedQty } : finance)
         );
-        // Sync the claimedQty change with financeLines to persist values across filters
-        this.financeLines = this.financeLines.map(finance => 
-            (finance.Id === financeId ? { ...finance, Claimed_QTY__c: claimedQty } : finance)
-        );
-
         this.updateSaveButtonState();
         console.log('handleClaimedQtyChange finance: ', financeId);
-        console.log('handleClaimedQtyChange finance.Claimed_QTY__c: ', financeId.Claimed_QTY__c);
+        console.log('handleClaimedQtyChange finance.Claimed_QTY__c: ', claimedQty);
         console.log('handleClaimedQtyChange this.filteredFinanceLines: ', this.filteredFinanceLines);
-
     }
 
     handleUnbillableChange(event) {
@@ -144,11 +152,27 @@ renderedCallback() {
         this.filteredFinanceLines = this.filteredFinanceLines.map(finance => 
             (finance.Id === financeId ? { ...finance, Unbillable__c: unbillable } : finance)
         );
-        // Sync the unbillable change with financeLines to persist values across filters
-        this.financeLines = this.financeLines.map(finance => 
-            (finance.Id === financeId ? { ...finance, Unbillable__c: unbillable } : finance)
-        );
         console.log('handleUnbillableChange unbillable: ', unbillable);
+    }
+
+    @wire(getInvoiceEligibilityPicklistValues)
+    wiredPicklistValues({ error, data }) {
+        if (data) {
+            this.invoiceEligibilityOptions = data.map(value => {
+                return { label: value, value: value };
+            });
+        } else if (error) {
+            console.error('Error fetching picklist values', error);
+        }
+    }
+
+    handleInvoiceEligibilityChange(event) {
+        const financeId = event.target.dataset.id;
+        const invoiceEligibility = event.target.value;
+        this.filteredFinanceLines = this.filteredFinanceLines.map(finance => 
+            (finance.Id === financeId ? { ...finance, Invoice_Eligibility__c: invoiceEligibility } : finance)
+        );
+        console.log('handleInvoiceEligibilityChange invoiceEligibility: ', invoiceEligibility);
     }
 
     updateSaveButtonState() {
@@ -212,16 +236,18 @@ renderedCallback() {
         const financeLines = this.filteredFinanceLines.map(finance => {
             const claimedQtyInput = this.template.querySelector(`input[name="input1"][data-id="${finance.Id}"]`);
             const unbillableCheckbox = this.template.querySelector(`input[name="unbillable"][data-id="${finance.Id}"]`);
+            const invoiceEligibilityInput = this.template.querySelector(`input[name="invoice"][data-id="${finance.Id}"]`);
     
             return {
                 ...finance,
                 Claimed_QTY__c: claimedQtyInput ? claimedQtyInput.value : finance.Claimed_QTY__c,
-                Unbillable__c: unbillableCheckbox ? unbillableCheckbox.checked : finance.Unbillable__c
+                Unbillable__c: unbillableCheckbox ? unbillableCheckbox.checked : finance.Unbillable__c,
+                Invoice_Eligibility__c: invoiceEligibilityInput ? invoiceEligibilityInput.value : finance.Invoice_Eligibility__c
             };
             
         });
 
-        const financeLinesList = financeLines.filter(finance => finance.Claimed_QTY__c !== null);
+        const financeLinesList = financeLines.filter(finance => finance.Claimed_QTY__c && finance.Claimed_QTY__c > 0);
         this.updateSaveButtonState();
 
         if (this.isSaveDisabled) {
@@ -252,7 +278,9 @@ renderedCallback() {
                 Finance__c: finance.Id,
                 Claimed_QTY__c: this.claimedQty || finance.Claimed_QTY__c, // Use claimedQty from handleChange
                 Unbillable__c: this.unbillable !== undefined ? this.unbillable : finance.Unbillable__c, // Use unbillable from handleChange
-                Claiming_Source__c: 'ST - Bulk'
+                Invoice_Eligibility__c: this.invoiceEligibility !== undefined ? this.invoiceEligibility : finance.Invoice_Eligibility__c, // Use invoiceEligibility from handleChange
+                Claiming_Source__c: 'ST - Bulk',
+                WL_Price_Per_Unit__c: finance.Price_Per_Unit__c
             }
         }));
 
@@ -288,12 +316,13 @@ renderedCallback() {
             .catch(error => {
                 this.dispatchEvent(
                     new ShowToastEvent({
-                        title: 'Error',
-                        message: 'Error creating Work Logs : ' + JSON.stringify(error.body.message)
-                            .substring(0, 99) + (error.body.message.length > 100 ? '...' : ''),
-                        variant: 'error'
+                        title: 'Error creating Work Logs: ',
+                        message: error.body.output.errors[0].message,
+                        variant: 'error',
+                        mode: 'sticky',
                     })
                 );
+
                 console.log('Error creating work logs: ' + JSON.stringify(error));
                 this.isLoading = false;
             });
