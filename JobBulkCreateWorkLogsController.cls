@@ -1,4 +1,4 @@
-public with sharing class JobBulkCreateWorkLogsController {
+public without sharing class JobBulkCreateWorkLogsController {
     public static Id recordId;
 
     @AuraEnabled(cacheable=true)
@@ -21,9 +21,20 @@ public with sharing class JobBulkCreateWorkLogsController {
     }
 
     @AuraEnabled(cacheable=true)
+    public static List<String> getInvoiceEligibilityPicklistValues() {
+        List<String> picklistValues = new List<String>();
+        Schema.DescribeFieldResult fieldResult = Work_Log__c.Invoice_Eligibility__c.getDescribe();
+        List<Schema.PicklistEntry> ple = fieldResult.getPicklistValues();
+        for (Schema.PicklistEntry picklistEntry : ple) {
+            picklistValues.add(picklistEntry.getLabel());
+        }
+        return picklistValues;
+    }
+
+    @AuraEnabled(cacheable=true)
     public static List<sitetracker__Finance__c> getRelatedFinanceLines(Id recordId) {
         return [
-            SELECT Id, Name, sitetracker__PO_Line_Item__c, Short_Description__c, Price_Per_Unit_Formula__c, sitetracker__Pricebook_Item__c 
+            SELECT Id, Name, sitetracker__PO_Line_Item__c, Short_Description__c, Price_Per_Unit_Formula__c, Price_Per_Unit__c, sitetracker__Pricebook_Item__c 
             FROM sitetracker__Finance__c 
             WHERE Job__c = :recordId AND (Finance_Line_Type__c = 'Standard' OR Finance_Line_Type__c = 'Child')
         ];
@@ -51,6 +62,7 @@ public with sharing class JobBulkCreateWorkLogsController {
                 workLog.Claimed_QTY__c = workLog.Claimed_QTY__c;
                 workLog.Unbillable__c = workLog.Unbillable__c;
                 workLog.Claiming_Source__c = workLog.Claiming_Source__c;
+                workLog.WL_Price_Per_Unit__c = workLog.WL_Price_Per_Unit__c;
 
                 System.debug('workLog: ' + workLog);
                 System.debug('Assigned Resource: ' + workLog.Assigned_Resource__c);
